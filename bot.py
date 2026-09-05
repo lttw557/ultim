@@ -1,76 +1,67 @@
+import os
 import random
 import string
-import asyncio
+import logging
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, filters, ContextTypes, CommandHandler
 
 # ===== НАСТРОЙКИ =====
-TOKEN = "8906474519:AAGLdemExK3LMp6wPNPFHRM9blSTBFjlVxU"                 # токен от @BotFather
-MY_USER_ID = 8585176339              # ваш ID (число)
+TOKEN = "8906474519:AAGLdemExK3LMp6wPNPFHRM9blSTBFjlVxU"  # замените на токен от @BotFather
+WEBHOOK_URL = "https://ultim-production.up.railway.app/telegram"  # ваш Railway-адрес
 # =====================
 
-# Жуткие символы
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 SYMBOLS = ["𐕣", "⸸", "𖤐"]
+PHRASE = "i want to kill myself"   # можно заменить на любую другую
 
-# Фраза, которую будет повторять (можете заменить на свою, но я не рекомендую "kill myself")
-PHRASE = "i want to end it all"
+async def handle_business_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает сообщения в режиме секретаря."""
+    if not update.business_message:
+        return
+    msg = update.business_message
+    conn_id = msg.business_connection_id
 
-# Генератор случайного набора букв/цифр
-def gibberish(length):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    # Хаотичный набор
+    rand_part = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 15)))
+    for _ in range(random.randint(2, 4)):
+        pos = random.randint(0, len(rand_part))
+        rand_part = rand_part[:pos] + random.choice(SYMBOLS) + rand_part[pos:]
 
-# Асинхронная функция, отправляющая серию сообщений
-async def send_series(update: Update):
-    # Количество сообщений в серии (от 3 до 6)
-    count = random.randint(3, 6)
-    for _ in range(count):
-        # Случайно выбираем, что отправить
-        choice = random.choice(["gibberish", "phrase", "symbols", "mixed"])
-        if choice == "gibberish":
-            text = gibberish(random.randint(8, 15))
-            # добавляем пару символов
-            for _ in range(random.randint(1, 3)):
-                text += random.choice(SYMBOLS)
-        elif choice == "phrase":
-            repeat = random.randint(3, 10)
-            text = (PHRASE + " ") * repeat
-            text = text.strip()
-            # иногда добавляем символы между словами
-            if random.random() > 0.5:
-                words = text.split()
-                for i in range(1, len(words), 2):
-                    words[i] = words[i] + random.choice(SYMBOLS)
-                text = ' '.join(words)
-        elif choice == "symbols":
-            text = ''.join(random.choices(SYMBOLS, k=random.randint(5, 15)))
-        else:  # mixed
-            parts = []
-            for _ in range(random.randint(2, 5)):
-                if random.random() > 0.5:
-                    parts.append(gibberish(random.randint(3, 6)))
-                else:
-                    parts.append(random.choice(SYMBOLS))
-            text = ' '.join(parts)
-        # Отправляем сообщение
-        await update.message.reply_text(text)
-        # Пауза от 0,5 до 1,5 секунды
-        await asyncio.sleep(random.uniform(0.5, 1.5))
+    # Повторяющаяся фраза
+    repeat = random.randint(10, 25)
+    repeated = (PHRASE + " ") * repeat
+    repeated = repeated.strip()
 
-# Обработчик входящих сообщений
-async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Запускаем серию (игнорируем context, он не нужен)
-    await send_series(update)
+    # Отправляем два сообщения от имени владельца аккаунта
+    await context.bot.send_message(
+        chat_id=msg.chat.id,
+        text=rand_part,
+        business_connection_id=conn_id
+    )
+    await context.bot.send_message(
+        chat_id=msg.chat.id,
+        text=repeated,
+        business_connection_id=conn_id
+    )
 
-# Главная функция
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Бот-секретарь активирован.")
+
 def main():
     app = Application.builder().token(TOKEN).build()
-    # Фильтр: только текстовые сообщения (не команды) и только от вашего ID
-    app.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & filters.User(user_id=MY_USER_ID),
-        handle
-    ))
-    print("Бот запущен и будет отвечать только вам (по ID).")
-    app.run_polling()
+    app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_business_message))
+    app.add_handler(CommandHandler("start", start))
+
+    port = int(os.environ.get("PORT", 8443))
+    logger.info(f"Запуск webhook на порту {port}, URL: {WEBHOOK_URL}")
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        webhook_url=WEBHOOK_URL,
+        allowed_updates=Update.ALL_TYPES
+    )
 
 if __name__ == "__main__":
     main()
