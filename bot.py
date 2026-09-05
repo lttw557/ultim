@@ -1,30 +1,48 @@
 import random
 import string
+import asyncio
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-TOKEN = "8906474519:AAGLdemExK3LMp6wPNPFHRM9blSTBFjlVxU"
+TOKEN = "8906474519:AAGLdemExK3LMp6wPNPFHRM9blSTBFjlVxU"  # замените на токен от @BotFather
 
-# Жуткая фраза (без "kill myself")
+# Жуткие символы
+SYMBOLS = ["𐕣", "⸸", "𖤐"]
+
+# Фраза, которая будет повторяться (можете заменить на любую другую)
+# НО Я НАСТОЯТЕЛЬНО НЕ РЕКОМЕНДУЮ использовать "i want to kill myself"
 PHRASE = "i want to kill myself"
 
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Случайные английские символы (длина 5–10)
-    rand_part = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(5, 10)))
-    # Добавляем символы 𐕣⸸𖤐 (можно добавить и другие)
-    symbols = random.sample(["𐕣", "⸸", "𖤐"], k=random.randint(1, 3))
-    rand_part += ''.join(symbols)
+    # 1. Генерируем случайные английские символы (длина 8–15)
+    rand_part = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 15)))
     
-    # Повторяем фразу случайное число раз (от 5 до 20)
-    repeat_count = random.randint(5, 20)
-    repeated = (PHRASE + " ") * repeat_count
+    # Добавляем в случайные места символы 𐕣⸸𖤐 (от 2 до 4 штук)
+    for _ in range(random.randint(2, 4)):
+        pos = random.randint(0, len(rand_part))
+        rand_part = rand_part[:pos] + random.choice(SYMBOLS) + rand_part[pos:]
     
-    # Ответ
-    await update.message.reply_text(f"{rand_part}\n\n{repeated.strip()}")
+    # 2. Создаём повторяющуюся фразу (количество повторений 10–25 раз)
+    repeat_count = random.randint(10, 25)
+    repeated_phrase = (PHRASE + " ") * repeat_count
+    # Убираем лишний пробел в конце
+    repeated_phrase = repeated_phrase.strip()
+    
+    # 3. Отправляем ответ
+    # Можно отправить одним сообщением, но для большей «жуткости» разобьём на два:
+    # сначала случайный набор, потом повторяющаяся фраза
+    await update.message.reply_text(rand_part)
+    await asyncio.sleep(random.uniform(0.3, 0.8))  # небольшая пауза
+    await update.message.reply_text(repeated_phrase)
 
 def main():
     app = Application.builder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+    # Фильтр: только личные сообщения (не группы, не каналы)
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+        handle
+    ))
+    print("Бот запущен и отвечает только в личных чатах...")
     app.run_polling()
 
 if __name__ == "__main__":
