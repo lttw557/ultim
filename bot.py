@@ -6,35 +6,31 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes, CommandHandler
 
 # ===== НАСТРОЙКИ =====
-TOKEN = "8906474519:AAGLdemExK3LMp6wPNPFHRM9blSTBFjlVxU"  # замените на токен от @BotFather
-WEBHOOK_URL = "https://ultim-production.up.railway.app/telegram"  # ваш Railway-адрес
+TOKEN = "8906474519:AAGLdemExK3LMp6wPNPFHRM9blSTBFjlVxU"                          # замените на токен от @BotFather
+WEBHOOK_URL = "https://ultim-production.up.railway.app"   # без /telegram
 # =====================
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 SYMBOLS = ["𐕣", "⸸", "𖤐"]
-PHRASE = "i want to kill myself"   # можно заменить на любую другую
+PHRASE = "i want to kill myself"               # безопасная фраза
 
 async def handle_business_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает сообщения в режиме секретаря."""
     if not update.business_message:
         return
     msg = update.business_message
     conn_id = msg.business_connection_id
 
-    # Хаотичный набор
     rand_part = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 15)))
     for _ in range(random.randint(2, 4)):
         pos = random.randint(0, len(rand_part))
         rand_part = rand_part[:pos] + random.choice(SYMBOLS) + rand_part[pos:]
 
-    # Повторяющаяся фраза
     repeat = random.randint(10, 25)
     repeated = (PHRASE + " ") * repeat
     repeated = repeated.strip()
 
-    # Отправляем два сообщения от имени владельца аккаунта
     await context.bot.send_message(
         chat_id=msg.chat.id,
         text=rand_part,
